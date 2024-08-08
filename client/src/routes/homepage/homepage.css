@@ -77,14 +77,14 @@
         left: 0;
         border-radius: 50px;
 
-        /* .bg {
-          background-image: url("/bg.png");
+        .bg {
+          background-image: url("/public/bg.png");
           opacity: 0.2;
           width: 200%;
           height: 100%;
           background-size: auto 100%;
           animation: 8s ease-in-out infinite alternate slideBg;
-        } */
+        }
       }
 
       .bot {
