@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
-import cors from "cors"
+import cors from "cors";
+import path from "path";
+import { Url } from "url";
 import ImageKit from "imagekit";
 import mongoose from "mongoose";
 import UserChats from "./models/userChats.js";
@@ -17,6 +19,9 @@ app.use(cors({
     credentials:true
 }))
 app.use(express.json())
+
+const __filename = fileURLToPath(process.env.url);
+const __dirname = path.dirname(__filename);
 
 const imagekit = new ImageKit({
     urlEndpoint: process.env.IMAGE_KIT_ENDPOINT,
@@ -93,7 +98,6 @@ app.get("/api/userchats", ClerkExpressRequireAuth(), async(req,res)=>{
     try{
 
         const userChats = await UserChats.find({userId})
-        console.log(userChats)
         res.status(200).send(userChats[0].chats)
 
     }catch(err){
@@ -102,10 +106,59 @@ app.get("/api/userchats", ClerkExpressRequireAuth(), async(req,res)=>{
     }
 })
 
+app.get("/api/chats/:id", ClerkExpressRequireAuth(), async(req,res)=>{
+    const userId = req.auth.userId
+    
+    try{
+
+        const chat = await Chat.findOne({_id:req.params.id, userId})
+        res.status(200).send(chat)
+
+    }catch(err){
+        res.status(500).send("Error fetching chat")
+    }
+})
+
+app.put("/api/chats/:id", ClerkExpressRequireAuth(), async (req, res) => {
+    const userId = req.auth.userId;
+  
+    const { question, answer, img } = req.body;
+  
+    const newItems = [
+      ...(question
+        ? [{ role: "user", parts: [{ text: question }], ...(img && { img }) }]
+        : []),
+      { role: "model", parts: [{ text: answer }] },
+    ];
+  
+    try {
+      const updatedChat = await Chat.updateOne(
+        { _id: req.params.id, userId },
+        {
+          $push: {
+            history: {
+              $each: newItems,
+            },
+          },
+        }
+      );
+      res.status(200).send(updatedChat);
+    } catch (err) {
+      console.log(err);
+      res.status(500).send("Error adding conversation!");
+    }
+});
+
 app.use((err, req, res, next) => {
     console.error(err.stack)
     res.status(401).send('Unauthenticated!')
 })
+
+// PRODUCTION
+app.use(express.static(path.join(__dirname, "../client/dist")));
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
+});
 
 app.listen(port, ()=>{
     connect();
